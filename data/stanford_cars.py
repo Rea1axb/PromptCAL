@@ -9,17 +9,24 @@ from torch.utils.data import Dataset
 
 from data.data_utils import subsample_instances
 
-car_root = "/home/sheng/dataset/StanfordCars/stanford_cars/cars_{}/"
-meta_default_path = "/home/sheng/dataset/StanfordCars/stanford_cars/devkit/cars_{}.mat"
+# car_root = "/home/sheng/dataset/StanfordCars/stanford_cars/cars_{}/"
+car_root = "/home/czq/data/stanford_cars"
+# meta_default_path = "/home/sheng/dataset/StanfordCars/stanford_cars/devkit/cars_{}.mat"
+# meta_default_path = "/home/czq/data/stanford_cars/devkit/cars_{}.mat"
+meta_default_path = ""
 
 class CarsDataset(Dataset):
     """
         Cars Dataset
     """
-    def __init__(self, train=True, limit=0, data_dir=car_root, transform=None, metas=meta_default_path):
+    def __init__(self, train=True, limit=0, data_dir=car_root, transform=None, metas=None):
 
-        data_dir = data_dir.format('train') if train else data_dir.format('test')
-        metas = metas.format('train_annos') if train else metas.format('test_annos_withlabels')
+        # data_dir = data_dir.format('train') if train else data_dir.format('test')
+        metas = os.path.join(data_dir, 'devkit/cars_train_annos.mat') if train else os.path.join(data_dir, 'cars_test_annos_withlabels.mat')
+        data_dir = os.path.join(data_dir, 'cars_train/') if train else os.path.join(data_dir, 'cars_test/')
+        # metas = metas.format('train_annos') if train else metas.format('test_annos_withlabels')
+        
+        # metas = metas.format('annos') if train else metas.format('test_annos_withlabels')
 
         self.loader = default_loader
         self.data_dir = data_dir

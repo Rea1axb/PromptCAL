@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-import timm
+# import timm
 from torchvision import transforms
 import torchvision
 
@@ -14,7 +14,7 @@ from data.stanford_cars import CarsDataset
 from data.cifar import CustomCIFAR10, CustomCIFAR100, cifar_10_root, cifar_100_root
 from data.herbarium_19 import HerbariumDataset19, herbarium_dataroot
 from data.augmentations import get_transform
-from data.imagenet import get_imagenet_100_gcd_datasets
+from data.imagenet import get_imagenet_100_gcd_datasets, get_imagenet_datasets
 from data.data_utils import MergedDataset
 from data.cub import CustomCub2011, cub_root
 from data.fgvc_aircraft import FGVCAircraft, aircraft_root
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         model = torch.hub.load('facebookresearch/dino:main', 'dino_vitb16', pretrained=False)
 
         state_dict = torch.load(pretrain_path, map_location='cpu')
-        model.load_state_dict(state_dict)
+        model.load_state_dict(state_dict, strict=False)
 
         _, val_transform = get_transform(args.transform, image_size=224, args=args)
 
@@ -154,7 +154,7 @@ if __name__ == "__main__":
             model.load_state_dict(state_dict)
             model = model.to(args.device)
         else:
-            model.load_state_dict(state_dict)
+            model.load_state_dict(state_dict, strict=False)
             model = model.to(args.device)
 
         print(f'Saving to {args.save_dir}')
@@ -218,6 +218,21 @@ if __name__ == "__main__":
         train_dataset = FGVCAircraft(root=aircraft_root, transform=val_transform, split='trainval')
         test_dataset = FGVCAircraft(root=aircraft_root, transform=val_transform, split='test')
         targets = list(set([s[1] for s in train_dataset.samples]))
+
+    elif args.dataset == 'imagenet':
+        datasets = get_imagenet_datasets(train_transform=val_transform, test_transform=val_transform,
+                                             train_classes=range(50),
+                                             prop_train_labels=0.5)
+
+        datasets['train_labelled'].target_transform = None
+        datasets['train_unlabelled'].target_transform = None
+
+        train_dataset = MergedDataset(labelled_dataset=deepcopy(datasets['train_labelled']),
+                                      unlabelled_dataset=deepcopy(datasets['train_unlabelled'])
+                                      )
+
+        test_dataset = datasets['test']
+        targets = list(set(test_dataset.targets))
 
     else:
 

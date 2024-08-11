@@ -7,11 +7,12 @@ from sklearn.cluster import KMeans
 import torch
 from project_utils.cluster_utils import str2bool
 from project_utils.general_utils import seed_torch
-from project_utils.cluster_and_log_utils import log_accs_from_preds
+from project_utils.cluster_and_log_utils import log_accs_from_preds, get_confusion_matrix
 
 from methods.clustering.feature_vector_dataset import FeatureVectorDataset
 from data.get_datasets import get_datasets, get_class_splits
 from methods.clustering.faster_mix_k_means_pytorch import K_Means as SemiSupKMeans
+from methods.clustering.faster_mix_k_means_pytorch import pairwise_distance
 
 from tqdm import tqdm
 from config import feature_extract_dir
@@ -66,7 +67,7 @@ def test_kmeans_semi_sup(merge_test_loader, args, K=None, mode='train'):
 
     print('Fitting Semi-Supervised K-Means...')
     kmeans = SemiSupKMeans(k=K, tolerance=1e-4, max_iterations=args.max_kmeans_iter, init='k-means++',
-                           n_init=args.k_means_init, random_state=None, n_jobs=None, pairwise_batch_size=1024, mode=None)
+                           n_init=args.k_means_init, random_state=args.seed, n_jobs=None, pairwise_batch_size=1024, mode=None)
 
     l_feats, u_feats, l_targets, u_targets = (torch.from_numpy(x).to(device) for
                                               x in (l_feats, u_feats, l_targets, u_targets))
@@ -134,7 +135,7 @@ def test_kmeans_inductive_gncd(merge_test_loader, args, K=None):
 
     print('Fitting Semi-Supervised K-Means...')
     kmeans = KMeans(n_clusters=K, max_iter=args.max_kmeans_iter, init='k-means++',
-                        n_init=args.k_means_init, random_state=None)
+                        n_init=args.k_means_init, random_state=args.seed)
     kmeans.fit(all_feats)
     all_preds = kmeans.labels_
 
@@ -143,10 +144,53 @@ def test_kmeans_inductive_gncd(merge_test_loader, args, K=None):
     # -----------------------
     print(f'best inertia={kmeans.inertia_}')
     all_acc, old_acc, new_acc = log_accs_from_preds(y_true=targets, y_pred=all_preds, mask=mask_cls, eval_funcs=args.eval_funcs,
-                                                    save_name='SS-K-Means Train ACC Unlabelled', print_output=True)
+                                                    save_name='SS-K-Means Test ACC', print_output=True)
     return all_acc, old_acc, new_acc, 0, kmeans
     
+def test_kmeans(test_loader, centers, args):
+    all_feats = []
+    targets = np.array([])
+    mask_cls = np.array([])     # From all the data, which instances belong to Old classes
 
+    print('Collating features...')
+    # First extract all features
+    for batch_idx, (feats, label, _) in enumerate(tqdm(test_loader)):
+
+        feats = feats.to(device)
+
+        feats = torch.nn.functional.normalize(feats, dim=-1)
+
+        all_feats.append(feats.cpu().numpy())
+
+
+        targets = np.append(targets, label.cpu().numpy())
+        mask_cls = np.append(mask_cls, np.array([True if x.item() in range(len(args.train_classes))
+                                         else False for x in label]))
+
+    mask_cls = mask_cls.astype(bool)
+
+    all_feats = np.concatenate(all_feats)
+
+    all_feats, targets = (torch.from_numpy(x).to(device) for
+                          x in (all_feats, targets))
+    # centers = centers.cpu().numpy()
+
+    dist = pairwise_distance(all_feats, centers, batch_size=1024)
+    mindist, preds = torch.min(dist, dim=1)
+    targets = targets.cpu().numpy()
+    preds = preds.cpu().numpy()
+
+    save_dict = {
+        'preds': preds,
+        'targets': targets
+    }
+    save_path = os.path.join('./preds_result', f'{args.dataset_name}_{args.seed}.pt')
+    torch.save(save_dict, save_path)
+
+    all_acc, old_acc, new_acc = log_accs_from_preds(y_true=targets, y_pred=preds, mask=mask_cls, eval_funcs=args.eval_funcs,
+                                                    save_name='SS-K-Means Test ACC Unlabelled', print_output=True)
+    cm = get_confusion_matrix(y_true=targets, y_pred=preds)
+    return all_acc, old_acc, new_acc, cm
 
 
 if __name__ == "__main__":
@@ -172,13 +216,14 @@ if __name__ == "__main__":
     parser.add_argument('--eval_funcs', nargs='+', help='Which eval functions to use', default=['v1', 'v2'])
     parser.add_argument('--use_ssb_splits', type=str2bool, default=True)
     parser.add_argument('--eval_test', type=str2bool, default=False)
+    parser.add_argument('--seed', type=int, default=0)
 
     # ----------------------
     # INIT
     # ----------------------
     args = parser.parse_args()
     cluster_accs = {}
-    seed_torch(0)
+    seed_torch(args.seed)
     args.save_dir = os.path.join(args.root_dir, f'{args.model_name}_{args.dataset_name}')
 
     args = get_class_splits(args)
@@ -229,9 +274,23 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, num_workers=args.num_workers,
                               batch_size=args.batch_size, shuffle=False)
 
+    # print('Performing SS-K-Means on all in the training data...')
+    # all_acc, old_acc, new_acc, _, kmeans = test_kmeans_semi_sup(train_loader, args, K=args.K)
+    # if args.eval_test==True:
+    #     all_acc, old_acc, new_acc, _, kmeans = test_kmeans_inductive_gncd(test_loader, args, K=args.K)
+    # cluster_save_path = os.path.join(args.save_dir, 'ss_kmeans_cluster_centres.pt')
+    # torch.save(kmeans.cluster_centers_, cluster_save_path)
+
+    cluster_save_path = os.path.join(args.save_dir, 'ss_kmeans_cluster_centres.pt')
+    # if not os.path.exists(cluster_save_path):
     print('Performing SS-K-Means on all in the training data...')
     all_acc, old_acc, new_acc, _, kmeans = test_kmeans_semi_sup(train_loader, args, K=args.K)
-    if args.eval_test==True:
-        all_acc, old_acc, new_acc, _, kmeans = test_kmeans_inductive_gncd(test_loader, args, K=args.K)
-    cluster_save_path = os.path.join(args.save_dir, 'ss_kmeans_cluster_centres.pt')
+    
     torch.save(kmeans.cluster_centers_, cluster_save_path)
+    
+    centers = torch.load(cluster_save_path)
+    test_all_acc, test_old_acc, test_new_acc, cm = test_kmeans(test_loader, centers, args)
+
+    cm_save_path = os.path.join(args.save_dir, 'confusion_matrix.npy')
+    np.save(cm_save_path, cm)
+    all_acc, old_acc, new_acc, _, kmeans = test_kmeans_inductive_gncd(test_loader, args, K=args.K)

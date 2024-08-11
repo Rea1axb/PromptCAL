@@ -1,5 +1,5 @@
-ROOT=r'/home/sheng/PromptCAL'
-DATA_ROOT=r'/home/sheng/dataset'
+ROOT=r'/home/czq/workspace/GCD/PromptCAL'
+DATA_ROOT=r'/home/czq/data'
 
 # -----------------
 # DATASET PATHS
@@ -7,9 +7,10 @@ DATA_ROOT=r'/home/sheng/dataset'
 cifar_10_root = f'{DATA_ROOT}/CIFAR10'
 cifar_100_root = f'{DATA_ROOT}/CIFAR100'
 cub_root = f'{DATA_ROOT}/CUB'
-aircraft_root = f'{DATA_ROOT}/FGVCAircraft/fgvc-aircraft-2013b'
-herbarium_dataroot = f'{DATA_ROOT}/herbarium_2019/'
-imagenet_root = f'{DATA_ROOT}/imagenet-img'
+aircraft_root = f'{DATA_ROOT}/fgvc-aircraft-2013b'
+herbarium_dataroot = f'{DATA_ROOT}/herbarium_19/'
+# imagenet_root = f'{DATA_ROOT}/imagenet-img'
+imagenet_root = f'{DATA_ROOT}/imagenet100_small'
 imagenet_gcd_root = f'{DATA_ROOT}/imagenet_100_gcd'
 
 # -----------------
@@ -22,7 +23,7 @@ exp_root = f'{ROOT}/cache'          # All logs and checkpoints will be saved her
 # -----------------
 # OTHER PATHS
 # -----------------
-dino_pretrain_path = r'/home/sheng/dino/checkpoint/dino_vitbase16_pretrain.pth'
+dino_pretrain_path = r'/home/czq/workspace/GCD/SimGCD/pretrained_models/dino_vitbase16_pretrain.pth'
 ibot_pretrain_path = r'/home/sheng/dino/checkpoint/ibot-b16t.pth'
 
 

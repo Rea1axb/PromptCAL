@@ -27,7 +27,7 @@ def create_backbone(args, device):
         )
         if args.load_from_model is not None:
             print(f'NOTE:: load from {args.load_from_model}')
-            vptmodel.load_state_dict(torch.load(args.load_from_model, map_location='cpu'), strict=True)
+            vptmodel.load_state_dict(torch.load(args.load_from_model, map_location='cpu'), strict=False)
         else:
             vptmodel.load_from_state_dict(state_dict, False)
         model = vptmodel
@@ -53,7 +53,7 @@ def create_projection_head(args, device, use_checkpoint=True):
     projection_head.to(device)
     if (args.load_from_head is not None) and (use_checkpoint==True):
         print(f'NOTE: load head from {args.load_from_head}')
-        projection_head.load_state_dict(torch.load(args.load_from_head, map_location='cpu'), strict=True)
+        projection_head.load_state_dict(torch.load(args.load_from_head, map_location='cpu'), strict=False)
     return projection_head
     
     

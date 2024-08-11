@@ -720,7 +720,9 @@ def get_auxiliary_dataset(dataset_name='imagenet', dataloader_name='default', ba
     implemented for [torchvision loader, ]
     """
     if dataset_name=='imagenet':
-        dataset = ImageFolder(root=r'/home/sheng/dataset/imagenet-img', transform=my_get_transform('imagenet'))
+        # dataset = ImageFolder(root=r'/home/sheng/dataset/imagenet-img', transform=my_get_transform('imagenet'))
+        dataset = ImageFolder(root=r'/home/czq/data/imagenet-100', transform=my_get_transform('imagenet'))
+        
     else:
         raise NotImplementedError()
     
