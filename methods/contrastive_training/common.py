@@ -721,8 +721,11 @@ def get_auxiliary_dataset(dataset_name='imagenet', dataloader_name='default', ba
     """
     if dataset_name=='imagenet':
         # dataset = ImageFolder(root=r'/home/sheng/dataset/imagenet-img', transform=my_get_transform('imagenet'))
-        dataset = ImageFolder(root=r'/home/czq/data/imagenet-100', transform=my_get_transform('imagenet'))
-        
+        # dataset = ImageFolder(root=r'/data/data/imagenet-100', transform=my_get_transform('imagenet'))
+        dataset = ImageFolder(root=r'../../../data/imagenet100_small/train', transform=my_get_transform('imagenet'))
+    elif dataset_name == 'imagenet_200':
+        dataset = ImageFolder(root=r'../../../data/imagenet200_small/train', transform=my_get_transform('imagenet'))
+
     else:
         raise NotImplementedError()
     

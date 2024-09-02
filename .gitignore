@@ -134,3 +134,5 @@ events.*
 *.pyc
 *.pt
 *.out
+*.pth
+*.tar
